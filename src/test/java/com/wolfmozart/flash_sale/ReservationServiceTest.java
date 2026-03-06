@@ -47,6 +47,9 @@ public class ReservationServiceTest {
     @Autowired
     private TicketRepository ticketRepository;
 
+    @Autowired
+    private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+
     private Ticket ticketPrueba;
 
     // Esto se ejecuta ANTES de cada prueba para preparar el terreno
@@ -76,5 +79,25 @@ public class ReservationServiceTest {
 
         // Verificación: El segundo intento debe fallar (false)
         assertFalse(resultadoSegundoIntento, "El segundo usuario no debería poder bloquear un ticket ya reservado");
+    }
+
+    @Test
+    void deberiaConfirmarVentaYCambiarEstadoEnBaseDeDatos() {
+        // 1. PREPARACIÓN: El usuario bloquea el asiento en Redis primero
+        reservationService.lockTicket(ticketPrueba.getId(), "Usuario1");
+
+        // 2. ACCIÓN: El usuario confirma la compra (simulando el pago)
+        String resultado = reservationService.confirmarVentaFina(ticketPrueba.getId(), "Usuario1");
+
+        // 3. VERIFICACIÓN A: El servicio nos debe devolver el mensaje de éxito
+        assertEquals("¡Compra exitosa! Tu ticket está confirmado.", resultado);
+
+        // 4. VERIFICACIÓN B: Fuimos a la base de datos a ver si el PL/pgSQL funcionó
+        Ticket ticketActualizado = ticketRepository.findById(ticketPrueba.getId()).get();
+        assertEquals("VENDIDO", ticketActualizado.getStatus(), "El estado en PostgreSQL debería ser VENDIDO");
+
+        // 5. VERIFICACIÓN C: Revisamos que Redis haya borrado la reserva para liberar memoria
+        Boolean sigueBloqueado = redisTemplate.hasKey("ticket:lock:" + ticketPrueba.getId());
+        assertFalse(sigueBloqueado, "La llave de Redis debería haberse borrado tras la compra");
     }
 }

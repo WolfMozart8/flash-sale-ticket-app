@@ -40,4 +40,30 @@ public class ReservationService {
         return Boolean.TRUE.equals(isLocked);
     }
 
+    public String confirmarVentaFina(Long ticketId, String userId) {
+        String redisKey = "ticket:lock:" + ticketId;
+
+        // 1. Verificamos que el usuario que intenta comprar sea el mismo que reservó en Redis
+        String usuarioQueReservo = redisTemplate.opsForValue().get(redisKey);
+
+        if (usuarioQueReservo == null || !usuarioQueReservo.equals(userId)) {
+            return "Error: No tienes una reserva activa o ya expiró.";
+        }
+
+        try {
+            // 2. Llamamos al Procedimiento Almacenado de la base de datos
+            ticketRepository.confirmarCompra(ticketId, userId);
+
+            // 3. Si Postgres no tiró error, la compra fue un éxito.
+            // Borramos la reserva de Redis porque ya no la necesitamos
+            redisTemplate.delete(redisKey);
+
+            return "¡Compra exitosa! Tu ticket está confirmado.";
+        } catch (Exception e) {
+            // Si el procedimiento almacenado falla (ej. el ticket no estaba DISPONIBLE),
+            // capturamos el error aquí.
+            return "Error al confirmar la compra en la base de datos.";
+        }
+    }
+
 }

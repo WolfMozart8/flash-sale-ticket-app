@@ -27,4 +27,15 @@ public class ReservationController {
             return ResponseEntity.badRequest().body("Error: Ticket no disponible o ya reservado por alguien más.");
         }
     }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<String> confirmTicket(@RequestParam Long ticketId, @RequestParam String userId) {
+        String result = reservationService.confirmarVentaFina(ticketId, userId);
+
+        if (result.contains("exitosa")) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
 }
