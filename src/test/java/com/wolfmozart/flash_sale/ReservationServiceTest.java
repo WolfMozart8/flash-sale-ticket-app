@@ -100,4 +100,40 @@ public class ReservationServiceTest {
         Boolean sigueBloqueado = redisTemplate.hasKey("ticket:lock:" + ticketPrueba.getId());
         assertFalse(sigueBloqueado, "La llave de Redis debería haberse borrado tras la compra");
     }
+
+    @Test
+    void deberiaDevolverTicketYDejarloDisponible() {
+
+        // Intento... Se debe priorizar solo metodos que se quieren probar
+        // Evitar ingresar otros metodos si no son necesarios
+
+//        reservationService.lockTicket(ticketPrueba.getId(), "Usuario1");
+//        reservationService.confirmarVentaFina(ticketPrueba.getId(), "Usuario1");
+//
+//        Ticket ticketComprado = ticketRepository.findById(ticketPrueba.getId()).get();
+//
+//        assertEquals("VENDIDO", ticketComprado.getStatus(), "El ticket debe iniciar como VENDIDO");
+//        String resultado = reservationService.procesarDevolucion(ticketPrueba.getId());
+//        assertEquals("Ticket devuelto exitosamente.", resultado);
+//        Ticket ticketDevuelto = ticketRepository.findById(ticketPrueba.getId()).get();
+//
+//        assertEquals("DISPONIBLE", ticketDevuelto.getStatus(), "El ticket debe estar DISPONIBLE despues de devolucion");
+
+
+        // 1. PREPARACIÓN (Truqueamos el estado directamente en la BD sin usar los otros servicios)
+        ticketPrueba.setStatus("VENDIDO");
+        ticketRepository.save(ticketPrueba); // Actualizamos el ticket a VENDIDO en Postgres
+
+        // 2. ACCIÓN: Ejecutamos el metodo que realmente queremos probar
+        String resultado = reservationService.procesarDevolucion(ticketPrueba.getId());
+
+        // 3. VERIFICACIÓN: Comprobamos que el servicio respondió bien y la DB se actualizó
+        assertEquals("Ticket devuelto exitosamente.", resultado);
+
+        Ticket ticketDevuelto = ticketRepository.findById(ticketPrueba.getId()).get();
+        assertEquals("DISPONIBLE", ticketDevuelto.getStatus(), "El ticket debe estar DISPONIBLE despues de devolucion");
+
+        // Extra: Validamos que borró la llave de Redis por si acaso
+        assertFalse(redisTemplate.hasKey("ticket:lock:" + ticketPrueba.getId()));
+    }
 }

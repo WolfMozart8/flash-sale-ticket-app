@@ -66,4 +66,28 @@ public class ReservationService {
         }
     }
 
+    public String procesarDevolucion(Long ticketId) {
+
+        // No necesario comprobar, ya que eso se hace en POSTGRES
+//        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+//
+//        if (ticket == null) {
+//            return "No se encontró ticket con ese ID";
+//        } else if (ticket.getStatus().equals("DISPONIBLE")) {
+//            return "El ticket debe de estar vendido para poder deolverse";
+//        }
+
+        String redisKey = "ticket:lock:" + ticketId;
+
+        try {
+            ticketRepository.devolverTicket(ticketId);
+            redisTemplate.delete(redisKey);
+
+            return "Ticket devuelto exitosamente.";
+        } catch (Exception e) {
+            return "Error al confirmar la devolución del ticket en la base de datos";
+        }
+
+    }
+
 }

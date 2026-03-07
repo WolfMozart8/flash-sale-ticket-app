@@ -17,4 +17,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     // nativeQuery = true le dice: "No intentes traducir esto, mándalo a Postgres tal cual"
     @Query(value = "CALL confirmar_compra(:ticketId, :usuarioId)", nativeQuery = true)
     void confirmarCompra(@Param("ticketId") Long ticketId, @Param("usuarioId") String usuarioId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "CALL devolver_ticket(:ticketId)", nativeQuery = true)
+    void devolverTicket(@Param("ticketId") Long ticketId);
 }
