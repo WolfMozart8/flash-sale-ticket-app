@@ -3,6 +3,7 @@ package com.wolfmozart.flash_sale.service;
 import com.wolfmozart.flash_sale.model.Ticket;
 import com.wolfmozart.flash_sale.repository.TicketRepository;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -13,10 +14,12 @@ public class ReservationService {
     // Spring Boot inyecta esto automáticamente gracias a la dependencia de Redis
     private final StringRedisTemplate redisTemplate;
     private final TicketRepository ticketRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public ReservationService(StringRedisTemplate redisTemplate, TicketRepository ticketRepository) {
+    public ReservationService(StringRedisTemplate redisTemplate, TicketRepository ticketRepository, KafkaTemplate kafkaTemplate) {
         this.redisTemplate = redisTemplate;
         this.ticketRepository = ticketRepository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public boolean lockTicket(Long ticketId, String userId) {
@@ -57,6 +60,12 @@ public class ReservationService {
             // 3. Si Postgres no tiró error, la compra fue un éxito.
             // Borramos la reserva de Redis porque ya no la necesitamos
             redisTemplate.delete(redisKey);
+
+            // KAFKA
+            // Parámetro 1: El nombre del Topic ("grupo de whatsapp")
+            // Parámetro 2: El mensaje
+            String mensaje = "Ticket" + ticketId + " vendido a " + userId;
+            kafkaTemplate.send("ventas-confirmadas-topic", mensaje);
 
             return "¡Compra exitosa! Tu ticket está confirmado.";
         } catch (Exception e) {

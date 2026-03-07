@@ -32,6 +32,19 @@ public class ReservationServiceTest {
     static GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
             .withExposedPorts(6379);
 
+    @Container
+    @ServiceConnection
+    static org.testcontainers.kafka.KafkaContainer kafkaContainer =
+            new org.testcontainers.kafka.KafkaContainer(DockerImageName.parse("apache/kafka:3.7.0"));
+
+    // "hack" para usar version de convluentinc no funcionó en test
+//    static org.testcontainers.kafka.KafkaContainer kafkaContainer =
+//            new org.testcontainers.kafka.KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.4")
+//                    .asCompatibleSubstituteFor("apache/kafka")
+//            );
+
+
+
     //! Error en test, se agregan anotaciones de arriba
     // 3. Como el contenedor elige un puerto aleatorio en tu PC para no chocar con nada,
     // le inyectamos esa configuración a Spring Boot en tiempo real.
