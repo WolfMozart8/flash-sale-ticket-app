@@ -2,6 +2,7 @@ package com.wolfmozart.flash_sale.service;
 
 import com.wolfmozart.flash_sale.model.Ticket;
 import com.wolfmozart.flash_sale.repository.TicketRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class ReservationService {
         return Boolean.TRUE.equals(isLocked);
     }
 
+    @CacheEvict(value = "ListaTickets", allEntries = true)
     public String confirmarVentaFina(Long ticketId, String userId) {
         String redisKey = "ticket:lock:" + ticketId;
 
