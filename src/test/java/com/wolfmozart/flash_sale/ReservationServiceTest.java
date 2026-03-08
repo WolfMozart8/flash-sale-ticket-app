@@ -10,9 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -28,10 +30,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@Testcontainers // 1. Activa la magia de Testcontainers
+@Testcontainers 
 public class ReservationServiceTest {
 
-    // 2. Le decimos: "Levanta un Redis versión 7 de Alpine (ligero) en el puerto 6379"
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:15-alpine");
+
+    // Le decimos: "Levanta un Redis versión 7 de Alpine (ligero) en el puerto 6379"
     @Container
     @ServiceConnection(name = "redis")
     static GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
@@ -68,11 +75,21 @@ public class ReservationServiceTest {
     @Autowired
     private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private Ticket ticketPrueba;
 
     // Esto se ejecuta ANTES de cada prueba para preparar el terreno
     @BeforeEach
     void setup() {
+        // 2. CREAMOS LOS PROCEDIMIENTOS ALMACENADOS EN EL CONTENEDOR TEMPORAL
+        String sqlCompra = "CREATE OR REPLACE PROCEDURE confirmar_compra(p_ticket_id BIGINT, p_usuario_id VARCHAR) LANGUAGE plpgsql AS $$ BEGIN UPDATE tickets SET status = 'VENDIDO' WHERE id = p_ticket_id AND status = 'DISPONIBLE'; IF NOT FOUND THEN RAISE EXCEPTION 'Error'; END IF; END; $$;";
+        jdbcTemplate.execute(sqlCompra);
+
+        String sqlDevolucion = "CREATE OR REPLACE PROCEDURE devolver_ticket(p_ticket_id BIGINT) LANGUAGE plpgsql AS $$ BEGIN UPDATE tickets SET status = 'DISPONIBLE' WHERE id = p_ticket_id AND status = 'VENDIDO'; IF NOT FOUND THEN RAISE EXCEPTION 'Error'; END IF; END; $$;";
+        jdbcTemplate.execute(sqlDevolucion);
+
         ticketRepository.deleteAll();
         ticketPrueba = new Ticket("Concierto Test", "DISPONIBLE", new BigDecimal("1000"));
         ticketRepository.save(ticketPrueba);
