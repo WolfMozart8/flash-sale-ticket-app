@@ -17,7 +17,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.beans.IntrospectionException;
 import java.math.BigDecimal;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -148,5 +153,63 @@ public class ReservationServiceTest {
 
         // Extra: Validamos que borró la llave de Redis por si acaso
         assertFalse(redisTemplate.hasKey("ticket:lock:" + ticketPrueba.getId()));
+    }
+
+    @Test
+    void deberiaSoportarConcurrenciaYPermitirSoloUnBloqueo() throws InterruptedException {
+        int numeroDeAtacantes = 50;
+
+        // Creamos 50 "trabajadores" (hilos) simultáneos
+        ExecutorService executor = Executors.newFixedThreadPool(numeroDeAtacantes);
+
+        // CountDownLatch funciona como el semáforo de una carrera de autos.
+        // Lo iniciamos en 1. Todos los hilos esperarán a que llegue a 0 para arrancar juntos.
+        CountDownLatch semaforoDePartida = new CountDownLatch(1);
+
+        // Este otro semáforo es para que el Test espere a que los 50 terminen antes de revisar los resultados
+        CountDownLatch todosTerminaron = new CountDownLatch(numeroDeAtacantes);
+
+        // Variables seguras para contar en entornos multi-hilo
+        AtomicInteger comprasExitosas = new AtomicInteger(0);
+        AtomicInteger comprasFallidas = new AtomicInteger(0);
+
+        // Preparamos a los 50 corredores en la línea de partida
+        for (int i = 0; i < numeroDeAtacantes; i++) {
+            String userId = "UsuarioHacker-" + i;
+
+            executor.submit(() -> {
+                try {
+                    // El hilo se queda en pausa aquí, esperando el disparo de salida
+                    semaforoDePartida.await();
+
+                    // ¡Arrancan! Intentan bloquear el ticket en Redis
+                    boolean bloqueado = reservationService.lockTicket(ticketPrueba.getId(), userId);
+
+                    if (bloqueado) {
+                        comprasExitosas.incrementAndGet();
+                    } else {
+                        comprasFallidas.incrementAndGet();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    // Avisamos que este hilo terminó su trabajo
+                    todosTerminaron.countDown();
+                }
+            });
+        }
+
+        // 3... 2... 1... ¡PUM! Bajamos el semáforo a 0.
+        // Los 50 hilos atacan a Redis en el mismo milisegundo exacto.
+        semaforoDePartida.countDown();
+
+        // Obligamos al test a esperar que se asiente el polvo y todos terminen
+        todosTerminaron.await();
+        executor.shutdown();
+
+        // LA PRUEBA DEFINITIVA:
+        // Solo 1 debió lograrlo, 49 debieron rebotar contra el setIfAbsent de Redis.
+        assertEquals(1, comprasExitosas.get(), "Solo 1 usuario debió lograr bloquear el ticket");
+        assertEquals(49, comprasFallidas.get(), "49 usuarios debieron ser rechazados por Redis");
     }
 }
