@@ -75,21 +75,11 @@ public class ReservationServiceTest {
     @Autowired
     private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     private Ticket ticketPrueba;
 
     // Esto se ejecuta ANTES de cada prueba para preparar el terreno
     @BeforeEach
     void setup() {
-        // 2. CREAMOS LOS PROCEDIMIENTOS ALMACENADOS EN EL CONTENEDOR TEMPORAL
-        String sqlCompra = "CREATE OR REPLACE PROCEDURE confirmar_compra(p_ticket_id BIGINT, p_usuario_id VARCHAR) LANGUAGE plpgsql AS $$ BEGIN UPDATE tickets SET status = 'VENDIDO' WHERE id = p_ticket_id AND status = 'DISPONIBLE'; IF NOT FOUND THEN RAISE EXCEPTION 'Error'; END IF; END; $$;";
-        jdbcTemplate.execute(sqlCompra);
-
-        String sqlDevolucion = "CREATE OR REPLACE PROCEDURE devolver_ticket(p_ticket_id BIGINT) LANGUAGE plpgsql AS $$ BEGIN UPDATE tickets SET status = 'DISPONIBLE' WHERE id = p_ticket_id AND status = 'VENDIDO'; IF NOT FOUND THEN RAISE EXCEPTION 'Error'; END IF; END; $$;";
-        jdbcTemplate.execute(sqlDevolucion);
-
         ticketRepository.deleteAll();
         ticketPrueba = new Ticket("Concierto Test", "DISPONIBLE", new BigDecimal("1000"));
         ticketRepository.save(ticketPrueba);
