@@ -1,23 +1,42 @@
 package com.wolfmozart.flash_sale.controller;
 
+import com.wolfmozart.flash_sale.exception.TicketNoEncontradoException;
 import com.wolfmozart.flash_sale.model.Ticket;
 import com.wolfmozart.flash_sale.repository.TicketRepository;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/tickets")
 public class TicketController {
 
-    private TicketRepository ticketRepository;
+    private final TicketRepository ticketRepository;
 
     public TicketController(TicketRepository ticketRepository) {
         this.ticketRepository = ticketRepository;
+    }
+
+    @GetMapping("/ticket/{id}")
+    public ResponseEntity<Ticket> obtenerTicketPorId(@PathVariable Long id) {
+//        Optional<Ticket> ticket = ticketRepository.findById(id);
+
+//        if (ticket.isEmpty()) {
+//            throw new TicketNoEncontradoException("El ticket con id " + id + " no existe");
+//        }
+//
+//        return ResponseEntity.ok().body(ticket);
+
+        return ticketRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new TicketNoEncontradoException("El ticket con id " + id + " no existe"));
     }
 
     @GetMapping("/all")
