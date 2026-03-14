@@ -1,6 +1,8 @@
 package com.wolfmozart.flash_sale.controller;
 
 import com.wolfmozart.flash_sale.service.ReservationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/reservations")
+@Tag(name = "Reservaciones", description = "Manejo de reservaciones")
 public class ReservationController {
 
     private final ReservationService reservationService;
@@ -18,6 +21,7 @@ public class ReservationController {
     }
 
     @PostMapping("/lock")
+    @Operation(summary = "Un usuario reserva un ticket por tiempo limitado", description = "El ticket reservado es solo válido para un usuario durante el momento de lock")
     public ResponseEntity<String> lockTicket(@RequestParam Long ticketId, @RequestParam String userId) {
         boolean success = reservationService.lockTicket(ticketId, userId);
 
@@ -29,6 +33,7 @@ public class ReservationController {
     }
 
     @PostMapping("/confirm")
+    @Operation(summary = "Confirma compra de ticket", description = "Confirma Ticket comprado")
     public ResponseEntity<String> confirmTicket(@RequestParam Long ticketId, @RequestParam String userId) {
         String result = reservationService.confirmarVentaFina(ticketId, userId);
 

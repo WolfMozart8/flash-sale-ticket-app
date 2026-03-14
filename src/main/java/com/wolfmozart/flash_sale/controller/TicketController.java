@@ -3,6 +3,8 @@ package com.wolfmozart.flash_sale.controller;
 import com.wolfmozart.flash_sale.exception.TicketNoEncontradoException;
 import com.wolfmozart.flash_sale.model.Ticket;
 import com.wolfmozart.flash_sale.repository.TicketRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +18,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/tickets")
+@Tag(name = "Tickets", description = "Manejo de tickets")
 public class TicketController {
 
     private final TicketRepository ticketRepository;
@@ -25,6 +28,7 @@ public class TicketController {
     }
 
     @GetMapping("/ticket/{id}")
+    @Operation(summary = "Obtiene ticket por id", description = "Se debe ingresar un id de un ticket")
     public ResponseEntity<Ticket> obtenerTicketPorId(@PathVariable Long id) {
 //        Optional<Ticket> ticket = ticketRepository.findById(id);
 
@@ -41,12 +45,14 @@ public class TicketController {
 
     @GetMapping("/all")
     @Cacheable(value = "ListaTickets")
+    @Operation(summary = "Obtiene todos los tickets", description = "Obtiene todos los tickets disponibles")
     public List<Ticket> obtenerTodosLosTickets() {
         System.out.println("⚠️ ATENCIÓN: Fui a buscar los datos a PostgreSQL ⚠️");
         return ticketRepository.findAll();
     }
 
     @GetMapping("/mock")
+    @Operation(summary = "Crea datos de prueba", description = "Crea datos MOCK para poblar base de datos inicial")
     public String crearMock() {
         Ticket ticket1 = new Ticket("Concierto Test", "VENDIDO", new BigDecimal(1000));
         Ticket ticket2 = new Ticket("Festival Primavera", "DISPONIBLE", new BigDecimal(500));
